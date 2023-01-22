@@ -42,22 +42,22 @@ $ git branch gildong
 $ git branch # 브랜치 목록
 
 * gildong
-gildong/week1
+gildong-week1
 ...
 
-$ git branch gildong/week2 # 브랜치 생성
+$ git branch gildong-week2 # 브랜치 생성
 $ git branch # 브랜치 목록
 
-* gildong/week2
+* gildong-week2
 gildong
-gildong/week1
+gildong-week1
 ...
 
 *: 현재 설정된 기준 브랜치
 ```
 
 * 학습이 끝난 경우, 학습 브랜치를 본인의 메인 브랜치로 PR 요청
-  * `base: gildong` ← `compare: gildong/week2`
+  * `base: gildong` ← `compare: gildong-week2`
 
 # Convention
 
