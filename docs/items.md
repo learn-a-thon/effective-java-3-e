@@ -196,4 +196,68 @@ public class Elvis {
  - 복잡한 직렬화 상황이나 리플렉션 공격에도 제 2의 instance 생성을 완벽하게 막아준다.
  - 대부분 상황에서는 원소가 하나 뿐인 열거 타입이 싱글톤을 만드는 가장 좋은 방법이다.
 
-> 만드려고하는 싱글톤이 Enum 외의 클래스를 상속해야 한다면 이 방법은 사용할 수 없다.
+> 만드려고하는 싱글톤이 Enum 외의 클래스를 상속해야 한다면 이 방법은 사용할 수 없다.  
+
+
+ # Item 4: 인스턴스화를 막으려거든 private 생성자를 사용하라
+
+### 1. 정적 메서드만 담은 유틸리티 클래스는 인스턴스로 만들어 쓰려고 설계한 클래스가 아니다.  
+### 2. 추상 클래스로 만드는 것으로는 인스턴스화를 막을 수 없다.  
+### 3. private 생성자를 추가하면 클래스의 인스턴스화를 막을 수 있다.  
+```java
+// 추상 클래스로 생성을 제한하는 방법은 충분하지 않다. 
+public class UtilityClass {
+
+    /**
+     * 이 클래스는 인스턴스를 만들 수 없다.
+     */
+    private UtilityClass() {
+        throw new AssertionError();
+    }
+
+    public static String hello() {
+        return "hello";
+    }
+
+    public static void main(String[] args) {
+        String hello = UtilityClass.hello();
+
+        UtilityClass utilityClass = new UtilityClass();
+    }
+}
+
+```
+#### 4. 생성자에 주석으로 인스턴스화 불가한 이유를 설명하는 것이 좋다.  
+### 5. 상속을 방지할 때도 같은 방법을 사용할 수 있다. 
+
+# Item 5: 자원을 직접 명시하지 말고 의존 객체 주입을 사용하라
+  
+
+### 1. 사용하는 자원에 따라 동작이 달라지는 클래스는 정적 유틸리티 클래스나 싱글턴 방식이 적합하지 않다. (의존 객체 주입을 사용하라)  
+### 2. 의존 객체 주입이란 인스턴스를 생성할 때 필요한 자원을 넘겨주는 방식이다.  
+### 3. 이 방식의 변형으로 생성자에 자원 팩터리를 넘겨줄 수 있다.   
+### 4. 의존 객체 주입을 사용하면 클래스의 유연성, 재사용성, 테스트 용이성을 개선할 수 있다.   
+```java
+public class SpellChecker {
+
+    // Dictionary 가 interface 라면 SpellChecker는 재사용이 가능해진다.
+    private final Dictionary dictionary;
+
+    public SpellChecker(Dictionary dictionary) {
+        this.dictionary = dictionary;
+    }
+
+    public boolean isValid(String word) {
+        return dictionary.contains(word);
+    }
+
+    public List<String> suggestions(String typo) {
+        return dictionary.closeWordsTo(typo);
+    }
+}
+```
+
+### 이 패턴의 쓸만한 변형으로 생성자에 자원 팩토리를 넘겨주는 방식이 있다. 
+사용하는 객체 의존성을 바로 주입받는 것이 아니라 자원을 생성하는 팩토리 객체를 주입받는 형태로 사용되는 것이다. 
+
+> Java 8에서 소개한 Supplier<T> 인터페이스가 팩토리를 표현한 완벽한 예이다. 
