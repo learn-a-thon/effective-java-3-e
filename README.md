@@ -1,4 +1,5 @@
 # effective-java-3-e
+
 이펙티브 자바 3판 스터디
 
 # 학습 계획
@@ -29,14 +30,14 @@
 ## 학습 진행 방법
 
 * 본인 `영어 이니셜(Eng Name)` 혹은 `Github Id` 를 이름으로 된 브랜치 생성
-  * 해당 브랜치가 본인의 메인 브랜치가 될 것임
+    * 해당 브랜치가 본인의 메인 브랜치가 될 것임
 
 ```bash
 $ git branch gildong
 ```
 
 * 학습이 시작된 경우, 본인의 메인 브랜치를 기준으로 학습 브랜치 생성
-  * 네이밍은 자유롭게 설정 가능 다만 다른 사람과 겹치지 않아야 함
+    * 네이밍은 자유롭게 설정 가능 다만 다른 사람과 겹치지 않아야 함
 
 ```bash
 $ git branch # 브랜치 목록
@@ -57,7 +58,7 @@ gildong-week1
 ```
 
 * 학습이 끝난 경우, 학습 브랜치를 본인의 메인 브랜치로 PR 요청
-  * `base: gildong` ← `compare: gildong-week2`
+    * `base: gildong` ← `compare: gildong-week2`
 
 # Convention
 
