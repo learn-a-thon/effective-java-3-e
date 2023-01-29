@@ -36,6 +36,7 @@ public NutritionFacts(int servingSize, int servings, int calories, int fat, int 
 - 필수값이 세팅이 되었는지 체크를 할 수가 없다. -> 불완전한 상태로 사용될 여지가 있다.
 - immutable한 객체를 만들 수 없다. 
   - 불변 객체를 만들기 위해 객체 프리징을 사용해보자?
+  - Object.freeze()에 전달한 객체는 그뒤로 변경될 수 없음
 
 ### 빌더
 ```java
@@ -52,4 +53,8 @@ NutritionFacts cocaCola = new Builder(240, 8)
     - 필수값을 지정해줄 수 없다. (기존의 빌더의 장점을 버리는 것)
     - 전체 생성자가 공존한다. (Lombok의 AllArgsConstructor의 access level을 private으로 주면 됨)
 
-  
+### IllegalArgumentException 
+- 잘못된 인자를 넘겨 받았을 때 사용할 수 있는 기본 런타임 예외  
+
+### 가변인수 
+
