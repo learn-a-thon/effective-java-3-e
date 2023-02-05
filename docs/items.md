@@ -293,7 +293,16 @@ public class SpellChecker {
     - String, Soft, Weak, Phantom
  - 맵의 엔트리를 맵의 Value가 아니라 Key에 의존해야하는 경우에 사용할 수 있다.
  - 캐시를 구현하는데 사용할 수 있지만, 캐시를 직접 구현하는 것은 권장하지 않는다.
+
+# Item 8: finalizer와 cleaner 사용을 피하라
+ - 즉시 수행된다는 보장이 없다.
+ - 실제로 실행되지 않을 수도 있다.
+ - 동작 중ㅇ ㅔ예외가 발생하면 정리 작업이 처리되지 않을 수 있다.
+ - 심각한 성능 문제가 있다.
+ - 보안 문제가 있다. 
+ 
 # Item 9: try-finally 보다 try-with-resources를 사용하라
   - try-finally는 최선의 방법이 아니다.
   - try-with-resources를 사용하면 코드가 더 짧고 분명하다.
+  - 예외 정보 또한 훨씬 유용하다.
   
