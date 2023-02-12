@@ -266,7 +266,7 @@ public class SpellChecker {
 ### 문자열
  - 동일한 객체를 매번 새로 만들 필요가 없다.
  - 문자열은 리터럴을 사용하는 것이 좋다.
-### 정규신, pattern
+### 정규식, pattern
  - 생성 비용이 비싼 객체라서 반복해서 생성하기 보다, 캐싱하여 재사용하는 것이 좋다.
 ### 오토박싱
  - 기본타입을 그게 상응하는 박싱된 기본타입으로 상호 변환해주는 기술
@@ -280,3 +280,29 @@ public class SpellChecker {
  - 개념 : Mark, Sweep, Compact
  - 알고리즘 : Serial, Parallel, CMS, G1, ZGC, Shenandoah
  - 참고) How to choose the best Java garbage collector
+
+# Item 7: 다 쓴 객체 참조를 해제하라.
+ - 어떤 객체에 대한 레퍼런스가 남아있다면 해당 객체는 가비지 컬렉션의 대상이 되지 않는다.
+ - 자기 메모리를 직접 관리하는 클래스라면 메모리 누수에 주의해야한다.
+ - 참조 객체를 null 처리하는 일은 예외적인 경우이며 가장 좋은 방법은 유효 범위 밖으로 밀어내는 것이다.
+
+#### WeakHashMap
+더 이상 사용하지 않는 객체를 GC할 때 자동으로 삭제해주는 Map
+ - key가 더 이상 강하게 레퍼런스되는 곳이 없다면 해당 엔트리를 제거한다.
+ - 레퍼런스 종류
+    - String, Soft, Weak, Phantom
+ - 맵의 엔트리를 맵의 Value가 아니라 Key에 의존해야하는 경우에 사용할 수 있다.
+ - 캐시를 구현하는데 사용할 수 있지만, 캐시를 직접 구현하는 것은 권장하지 않는다.
+
+# Item 8: finalizer와 cleaner 사용을 피하라
+ - 즉시 수행된다는 보장이 없다.
+ - 실제로 실행되지 않을 수도 있다.
+ - 동작 중에 예외가 발생하면 정리 작업이 처리되지 않을 수 있다.
+ - 심각한 성능 문제가 있다.
+ - 보안 문제가 있다. 
+ 
+# Item 9: try-finally 보다 try-with-resources를 사용하라
+  - try-finally는 최선의 방법이 아니다.
+  - try-with-resources를 사용하면 코드가 더 짧고 분명하다.
+  - 예외 정보 또한 훨씬 유용하다.
+  
