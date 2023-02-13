@@ -305,4 +305,44 @@ public class SpellChecker {
   - try-finally는 최선의 방법이 아니다.
   - try-with-resources를 사용하면 코드가 더 짧고 분명하다.
   - 예외 정보 또한 훨씬 유용하다.
-  
+
+# Item 10: equals는 일반 규약을 지켜 재정의하라
+equals는 논리적 동치성을 가질 때 재정의하라.
+
+> 반사성 - null이 아닌 모든 참조 값 x에 대해, x.equals(x)는 true  
+대칭성 -  null이 아닌 모든 참조 값 x,y에 대해, xequals(y)가 true이면 y.equals(x)도 true이다.   
+추이성 - null이 아닌 모든 참조값 x,y,z에 대해, x.equals(y)가 true이고, y.equals(z)도 true이면 y.equals(z)도 true이다.  
+일관성 - null이 아닌 모든 참조 값 x, y에 대해, x.equals(y)를 반복해서 호출하면 항상 true를 반환하거나 항상 false를 반환한다.  
+null-아님 - null이 아닌 모든 참조값 x에 대해, x.equals(null)은 false이다.
+
+### 좋은 equals 메소드를 구현하는 방법
+ - == 연산자를 사용해 입력이 자기 자신의 참조인지 확인한다.
+   - 단순한 성능 최적화용
+ - instanceof 연산자로 입력이 올바른 타입인지 확인한다.
+   - 인터페이스를 구현한 클래스들의 equals를 지원해야하는지에 대해 고려 
+ - 입력을 올바른 탕비으로 형변환한다.
+ - 입력 객체와 자기 자신에 대응되는 핵심 필드들이 모두 일치하는지 하나씩 검사한다. 
+
+
+# Item 11. equals를 재정의하려거든 hashCode도 재정의하라.
+ - equals 비교에 사용하는 정보가 변경되지 않았다면 hashCode는 매번 같은 값을 리턴해야 한다.
+ - 두 객체에 대한 equals가 같다면, hashCode의 값도 같아야 한다.
+ - 두 객체에 대한 equals가 다르더라도, hashCode의 값은 같을 수 있지만 해사태이블 성능을 고려해 다른 값을 리턴하는 것이 좋다. 
+
+ - 해시코드 구현 방법
+    ```java
+    @Override
+        public int hashCode() {
+            int result = Short.hashCode(areaCode);
+            result = 31 * result + Short.hashCode(prefix);
+            result = 31 * result + Short.hashCode(lineNum);
+            return result;
+        }
+    ```
+# Item 12. toString을 항상 재정의하라
+ - toString은 간결하면서 사람이 읽기 쉬운 형태의 유익한 정보를 반환해야 한다.
+ - Object의 toString은 클래스이름@16진수로 표시한 해시코드로 표현된다.
+ - 객체가 가진 모든 정보를 보여주는 것이 좋다.
+ - 값 클래스라면 포맷을 문서에 명시하는 것이 좋으며 해당 포맷으로 객체를 생성할 수 있는 정적 팩토리나 생성자를 제공하는 것이 좋다.
+ - toString이 반환한 값에 포함된 정보를 얻어올 수 있는 API를 제공하는 것이 좋다.
+ - 경우에 따라 AutoValue, 롬복 또는 IDE를 사용하지 않는게 적절할 수 있다. 
