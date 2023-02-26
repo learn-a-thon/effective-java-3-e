@@ -1,4 +1,4 @@
-com.example.effectivejava3e.week5.item14;
+package com.example.effectivejava3e.week5.item14;
 
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
