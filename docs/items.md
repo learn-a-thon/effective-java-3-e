@@ -472,3 +472,182 @@ public class ForwardingSet<E> implements Set<E> {
 
 ### 정리
 상속은 캡슐화를 해친다는 문제가 있다. 상속은 상위 클래스와 하위 클래스가 순수한 is-a 관계일 때만 사용해야한다. 상속 대신 컴포지션과 전달을 사용하자. 특히 래퍼 클래스로 구현할 적당한 인터페이스가 있다면 더욱 그렇다. 래퍼 클래스는 하위 클래스보다 견고하고 강력하다.
+
+# Item 19. 상속을 고려해 설계하고 문서화하라. 그러지 않았다면 상속을 금지하라. 
+> 상속용 클래스는 재정의할 수 있는 메서드들을 내부적으로 어떻게 이용하는지 (자기 사용) 문서로 남겨야 한다.  
+효율적인 하위 클래스를 큰 어려움 없이 만들 수 있게 하려면 클래스의 내부 동작 과정 중간에 끼어들 수 있는 훅을 잘 선별하여 protected 메서드 형태로 공개해야할 수도 있다. 
+
+```java
+protected void removeRange(int fromIndex, int toIndex)
+```
+AbstractList의 removeRange 메서드의 명세를 살펴보면 fromIndex에서 시작하는 리스트 반복자를 얻어 모든 원소를 제거할 때까지 `ite.next`, `ite.remove`를 반복 호출하도록 구현되어있다는 내용이 설명되어있다.  
+List 구현체의 최종 사용자는 removeRange 메서드에는 관심이 없다. 하지만 메서드의 상세 동작을 설명한 이유는 단지 하위 클래스에서 부분리스트의 삭제 메서드를 이미 잘 만들어진 고성능 api를 사용하기 쉽도록하기 위함이다.  
+
+### 상속 시 고려해야할 사항
+ - **상속용 클래스를 시험하는 방법은 직접 하위 클래스를 만들어보는 것이 유일하다.** 
+ - protected 메서드와 필드를 구현하면서 선택한 개발 방향은 반드시 검증되어야한다. 
+ - 상속용 클래스의 생성자는 직접적으로든 간접적으로든 재정의 가능 메서드를 호출해서는 안된다.
+
+ ```java
+public class Super {
+    // 잘못된 예 - 생성자가 재정의 가능 메서드를 호출한다.
+    public Super() {
+        overrideMe();
+    }
+    public void overrideMe() {
+
+    }
+}
+ ```
+ ```java
+public class Sub extends Super {
+    // 초기화되지 않은 final 필드, 생성자에서 초기화한다.
+    private final Instant instant;
+
+    Sub() {
+        instant = Instant.now();
+    }
+
+    // 재정의 가능 메서드, 상위 클래스의 생성자가 호출한다.
+    @Override
+    public void overrideMe() {
+        System.out.println(instant);
+    }
+
+    public static void main(String[] args) {
+        Sub sub = new Sub();
+        sub.overrideMe();
+    }
+}
+ ```
+ 상위 클래스의 생성자는 하위 클래스의 생성자가 인스턴스 필드를 초기화하기도 전에 `overrideMe`를 호출하기 때문에 null이 출력된다.  
+ 상위 클래스에서 instant 객체의 메서드를 호출했다면 `NPE`가 발생했을 것이다. 
+
+ `Cloneable` 과 `Serializable` 인터페이스는 상속용 설계의 어려움을 한층 더해주기 때문에 좋지 않다. 해당 클래스를 확장하려는 개발자에게 많은 부담을 줄 수 있다. 
+ **clone과 readObject는 생성자와 비슷한 효과를 낸다. 즉, 해당 메서드를 수행할 때 새로운 객체를 만든다.** 따라서 두 메서드에서도 직접적으로든 간접적으로든 재정의 가능 메서드를 호출해서는 안된다.  
+  - clone은 하위 클래스의 복제본의 상태를 수정하기 전(불완전 상태)에 재정의 메서드를 호출한다.
+  - readObject는 하위 클래스의 상태가 미처 다 역직렬화되기 전에 재정의한 메서드부터 호출하게 된다.
+
+이렇게 의도하지 않은 확장으로 인해 발생하는 문제를 해결하는 가장 좋은 방법은 상속용으로 설계하지 않은 클래스는 상속을 금지시키는 것이다. 두 가지 방법을 활용할 수 있다.
+- 클래스를 final로 선언하는 방법
+- 모든 생성자를 private이나 package-private으로 선언하고 public 정적 팩터리를 만들어주는 방법
+
+클래스 내부에서는 재정의 가능 메서드를 사용하지 않게 만들고 이 사실을 문서로 남기면 메서드를 재정의해도 다른 메서드의 동작에 아무런 영향을 주지 않는다. 
+
+### 정리
+상속용 클래스를 설계하기란 쉽지 않다. 클래스 내부에서 스스로를 어떻게 사용하는지 모두 문서로 남겨야 하며, 일단 문서화한 것은 그 클래스가 쓰이는 한 반드시 지켜야 한다. 그러지 않으면 그 내부 구현 방식을 믿고 활용하던 하위 클래스를 오동작하게 만들 수 있다. 다른 이가 효율 좋은 하위 클래스를 만들 수 있도록 일부 메서드를 protected로 제공해야할 수도 있다. 따라서 확장해야할 명확한 이유가 없다면 상속을 금지하는게 좋다.
+
+# Item 20. 추상 클래스보다는 인터페이스를 우선하라. 
+추상 클래스와 인터페이스의 가장 큰 차이는 추상클래스가 정의한 타입을 구현하는 클래스는 반드시 추상 클래스의 하위 클래스가 되어야한다는 것이다.  
+ 자바는 단일 상속만 지원하니, 추상 클래스 방식은 새로운 타입을 정의하는 데 커다란 제약을 준 것이다. 반면 인터페이스가 선언한 메서드를 모두 정의하고 그 일반 규약을 잘 지킨 클래스라면 다른 어떤 클래스를 상속했든 같은 타입으로 취급한다. 
+
+ 인터페이스는 추상클래스도 느슨한 결합이 가능하도록하고 **계층 구조가 없는 타입 프레임워크를 만들 수 있다.** 클래스는 두 부모를 섬길 수 없고, 클래스 계층 구조에 믹스인을 삽입하기에 합리적인 위치가 없다. 
+
+ ```java
+public interface Singer {
+    AudioClip sing(Song s)
+}
+ ```
+
+ ```java
+public interface Songwriter {
+    Song compose(int chargPosition);
+}
+ ```
+
+ ```java
+ public interface SingerSongwriter extends Singer, Songwriter {
+    AudioClip strum();
+    void actSenstive();
+ }
+ ```
+
+타입을 인터페이스로 정의하면 가수 클래스가 Singer와 Songwriter 모두를 구현해도 전혀 문제되지 않는다. 거대한 클래스 계층구조만으로는 공통 기능을 정의해놓은 타입이 없기 때문에 파라미터만 다른 메서드들이 수 없이 많아질 수 있다.
+
+> 인터페이스는 기능을 향상 시키는 안전하고 강력한 수단이 된다.   
+상속을 통해 만든 클래스는 래퍼 클래스 보다 활용도가 떨어지고 깨지기는 더 쉽다.
+
+### 템플릿 메서드 패턴
+인터페이스와 추상 골격 구현 클래스를 함께 제공하는식으로 인터페이스와 추상 클래스의 장점을 모두 취하는 방법이 있다.  
+인터페이스로는 타입을 정의하고, 필요하면 디폴트 메서드 몇 개도 함께 제공한다. 그리고 골격 구현 클래스는 나머지 메서드들까지 구현한다.  
+**관례상 인터페이스 이름이 Interface라면 그 골격 구현 클래스의 이름은 AbstractInterface로 짓는다.** 
+ - ex) AbstractCollection, AbstractSet, AbstractList .. 
+
+### 골격 구현 작성
+ - 인터페이스를 잘 살펴 다른 메서드들의 구현에 사용되는 기반 메서드들을 선정한다.
+ - 골격 구현에서는 추상 메서드가 된다.
+ - 직접 구현할 수 있는 메서드들은 모두 디폴트 메서드로 제공한다.
+ - 인터페이스를 구현하는 골격 구현 클래스를 하나 만들어 남은 메서드들을 작성해 넣는다.
+ - 해당 구현체에 필요하다면 public이 아닌 필드와 메서드를 추가할 수도 있다. 
+
+ ```java
+// 골격 구현 클래스
+public class AbstractMapEntry<K, V> implements Map.Entry<K, V> {
+
+    @Override
+    public K getKey() {
+        return null;
+    }
+
+    @Override
+    public V getValue() {
+        return null;
+    }
+
+    // 변경 가능한 엔트리는 이 메서드를 반드시 재정의해야한다.
+    @Override
+    public V setValue(V value) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == this) {
+            return true;
+        }
+        if (!(o instanceof Map.Entry)) {
+            return false;
+        }
+        Map.Entry<?, ?> e= (Map.Entry) o;
+        return Objects.equals(e.getKey(), getKey()) && Objects.equals(e.getValue(), getValue());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(getKey()) ^ Objects.hashCode(getValue());
+    }
+
+    @Override
+    public String toString() {
+        return getKey() + "=" + getValue();
+    }
+
+}
+ ```
+
+ ### 정리
+ 다중 구현용 타입으로는 인터페이스가 가장 적합하다. **복잡한 인터페이스라면 구현하는 수고를 덜어주는 골격 구현을 함께 제공하는 방법을 꼭 고려해보자.** 골격 구현은 "가능한 한" 인터페이스의 디폴트 메서드를 제공하여 모든 곳에서 활용하는 것이 좋다.  
+ 참고로 인터페이스에 걸려있는 구현상의 제약 때문에 골격 구현을 추상 클래스로 제공하는 경우가 더 흔하다. 
+
+ # Item 12. 인터페이스는 구현하는 쪽을 생각해 설계하라. 
+ 디폴트 메서드는 구현 클래스에 대해 아무것도 모른 채 합의 없이 무작정 삽입될 뿐이다.  
+ **생각할 수 있는 모든 상황에서 불변식을 해치지 않는 디폴트 메서드를 작성하기란 어렵다.**
+ ```java
+default boolean removeIf(Predicate<? super E> filter) {
+        Objects.requireNonNull(filter);
+        boolean result = false;
+        for (Iterator<E> it = iterator(); it.hasNext(); ) {
+            it.remove();
+            result = true;
+        }
+        return result;
+}
+```
+removeIf는 범용적으로 잘 작성되었지만 그렇다고 현존하는 모든 Collection 구현체와 어우러지는 것은 아니다. 
+
+>SynchronizedCollection 인스턴스를 여러 스레드가 공유하는 환경에서 한 스레드가 removeIf를 호출하면 예외가 발생하거나 다른 예기치 못한 결과로 이어질 수 있다. Collections.synchronizedCollection이 반환하는 클래스들은 removeIf를 재정의하고 이를 호출하는 다른 메서드들은 디폴트 구현을 호출하기 전에 동기화를 하도록했다. 하지만 제 3의 기존 컬렉션들은 여전히 수정되지 않고 매번 발빠르게 수정될 수 없다. 
+
+### 정리
+ - 기존 인터페이스에 디폴트 메서드로 새 메서드를 추가하는 일은 꼭 필요한 경우가 아니면 피해야한다.  
+ - 디폴트 메서드는 인터페이스로부터 메서드를 제거하거나 기존 메서드의 시그니처를 수정하는 용도가 아님을 명심해야 한다. 이런 방식으로 코드가 수정되면 기존 클라이언트에 큰 영향이 간다.
+ - 디폴트 메서드라는 유용한 도구가 생겼더라도 인터페이스를 설계 할 때는 세심한 주의를 기울여야 한다. 
