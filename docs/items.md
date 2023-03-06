@@ -380,3 +380,95 @@ null-아님 - null이 아닌 모든 참조값 x에 대해, x.equals(null)은 fal
  - 클래스에서 public static final 배열 필드를 두거나 이 필드를 반환하는 접근자 메서드를 제공해서는 안된다. 
 
 > 프로그램 요소의 접근성은 최소한으로 하자. 의도하지 않는 필드에 대해서는 클래스, 인터페이스, 멤버가 의도치 않게 api로 공개되는 일이 없어야 한다. public static final 필드가 참조하는 객체가 불변인지 확인하라.
+
+# Item 16. public 클래스에서는 public 필드가 아닌 접근자 메서드를 사용하라. 
+접근자를 지정하는 방식은 캡슐화의 이점을 제공하고, 불변식을 보장하는 등 객체지향적인 프로그래밍을 가능하게 한다. 하지만 **package-private 클래스 혹은 private 중첩 클래스라면 데이터 필드를 노출한다 해도 문제가 없다.**
+
+```java
+public class ColorPoint {
+    private static class Point {
+        public double x;
+        public double y;
+    }
+
+    public Point getPoint() {
+        Point point = new Point();
+        point.x = 1.0;
+        point.y = 2.0;
+        
+        return point;
+    }
+}
+
+```
+ - ColorPoint 외부에서 Point를 조작하는 것은 불가능하다. ColorPoint에서는 가능하다.
+ - 클래스를 중첩시키는 방식은 클래스를 선언하는 측면이나 이를 사용하는 측면에서도 접근자 방식보다 좋다.
+
+### 정리
+ > public 클래스는 절대 가변 필드를 직접 노출해서는 안 된다. 불변 필드라면 노출해도 덜 위험하지만 완전히 안심할 수는 없다. 하지만 package-private 클래스나 private 중첩 클래스에서는 종종 필드를 노출하는 편이 나을 때도 있다. 
+
+# Item 17. 변경 가능성을 최소화하라.
+불변 클래스는 생성부터 소멸까지 절대변하지 않는다. 불변 클래스는 가변 클래스보다 설계하고 구현하고 사용하기 쉽다. 오류의 여지도 적고 훨씬 안전하다. 
+
+## 불변 클래스를 만들기 위한 다섯 가지 규칙
+ - 객체의 상태를 변경하는 메서드를 제공하지 않는다.
+ - 클래스를 확장할 수 없도록 한다. (대표적으로 final)
+ - 모든 필드를 final로 선언한다.
+    - 신규 인스턴스를 동기화 없이 다른 스레드로 건네도 문제없도록 보장하는데도 필요하다.
+ - 모든 필드를 private으로 선언한다.
+ - 자신 외에는 내부의 가변 컴포넌트에 접근할 수 없도록 한다. 
+
+불변 객체는 스레드 간에 안전하게 공유할 수 있다. 따라서 불변 클래스라면 한 번 만든 인스턴스를 최대한 재활용하기를 권한다. 가장 대표적인 것이 자주쓰이는 값을 상수로 제공하는 것이다. 
+```java
+public static final Complex ZERO = new Complex(0, 0);
+public static final Complex ONE = new Complex(1, 0);
+public static final Complex I = new Complex(0, 1);
+```
+
+불변 클래스는 자주 사용되는 인스턴스를 캐싱하여 같은 인스턴스를 중복 생성하지 않게 해주는 정적 팩토리를 제공할 수 있다. 이런 정적 팩토리를 사용하면 여러 클라이언트가 인스턴스를 공유하여 메모리 사용량과 가비지 컬렉션 비용이 줄어든다. 
+**불변 객체는 자유롭게 공유할 수 있음은 물론, 불변 객체까리는 내부 데이터를 공유할 수 있다.**
+
+반면에 단점도 있다. 값이 다르면 반드시 독립된 객체로 만들어야한다는 것이다. 크기가 큰 객체의 작은 일부를 변경하기 위해 큰 생성 비용을 매번 지불해야한다.
+
+### 정리
+ - getter가 있다고 무조건 setter를 만들지말자
+ - 클래스는 꼭 필요한 경우가 아니라면 불변이어야 한다. 불변 클래스의 단점이라곤 특정 상황에서의 잠재적 성능저하 뿐이다.
+ - 만약 성능 때문에 어쩔 수 없다면 불변 클래스와 쌍을 이루는 가변 동반 클래스를 public 클래스로 제공하도록 하자.
+ - 생성자는 불변식 설정이 모두 완료된, 초기화가 완벽히 끝난 상태의 객체를 생성해야한다.
+
+# Item 18. 상속보다는 컴포지션을 사용하라.
+**메소드 호출과 달리 상속은 캡슐화를 깨뜨린다.** 상위 클래스가 어떻게 구현되느냐에 따라 하위 클래스의 동작에 이상이 생길 수 있다. 이런 상황에서는 중간 wrapper 클래스를 두고 확장할 수 있도록 할 수 있다. 
+
+```java
+/**
+ * 핵심은 임의의 Set에 계측 기능을 더해 새로운 Set 으로 만듦
+ *  - Set 모든 하위 구현체에 계측 기능을 더해 사용할 수 있다.
+ *  - 다른 Set 계측 기능을 덧씌운 데코레이터 패턴
+ *  - Set 과 CompositionInstrumentedSet 사이에 ForwardingSet 을 두어 명세되지 않은 '자기사용(self-use)' 으로 인한 예기치 못한 상황을 회피할 수 있다.
+ * @param <E>
+ */
+public class ForwardingSet<E> implements Set<E> {
+    private final Set<E> s;
+
+    ForwardingSet(Set<E> s) {
+        this.s = s;
+    }
+
+    @Override
+    public void clear() {
+        s.clear();
+    }
+
+    // ... other mehtod overriding
+
+    
+    public static void main(String[] args) {
+        // 컴포지션 방식은 어떤 Set 구현체라도 계측할 수 있다.
+        Set<String> stringSet = new CompositionInstrumentedSet<String>(new TreeSet<String>());
+        Set<Object> s = new CompositionInstrumentedSet<>(new HashSet<>(10));
+    }
+}
+```
+
+### 정리
+상속은 캡슐화를 해친다는 문제가 있다. 상속은 상위 클래스와 하위 클래스가 순수한 is-a 관계일 때만 사용해야한다. 상속 대신 컴포지션과 전달을 사용하자. 특히 래퍼 클래스로 구현할 적당한 인터페이스가 있다면 더욱 그렇다. 래퍼 클래스는 하위 클래스보다 견고하고 강력하다.
