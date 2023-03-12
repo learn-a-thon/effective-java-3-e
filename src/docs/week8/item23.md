@@ -1,0 +1,58 @@
+# item 23. 태그 달린 클래스보다는 클래스 계층 구조를 활용하라
+
+
+1. 태그 달린 클래스의 단점
+- 쓸데없는 코드가 많다.
+- 가독성이 나쁘다.
+- 메모리도 많이 사용한다.
+- 필드를 final로 선언하려면 불필요한 필드까지 초기화해야 한다.
+- 인스턴스 타입만으로는 현재 나타내는 의미를 알 길이 없다.
+
+2. 클래스 계층 구조로 바꾸면 모든 단점을 해결할 수 있다. (상속)
+
+
+```java
+class Figure {
+    enum Shape { RECTANGLE, CIRCLE, SQUARE };
+
+    // 태그 필드 - 현재 모양을 나타낸다.
+    final Shape shape;
+
+    // 다음 필드들은 모양이 사각형(RECTANGLE)일 때만 쓰인다.
+    double length;
+    double width;
+
+    // 다음 필드는 모양이 원(CIRCLE)일 때만 쓰인다.
+    double radius;
+
+    // 원용 생성자
+    Figure(double radius) {
+        shape = Shape.CIRCLE;
+        this.radius = radius;
+    }
+
+    // 사각형용 생성자
+    Figure(double length, double width) {
+        if (this.length == this.width) {
+            shape = Shape.SQUARE;
+        } else {
+            shape = Shape.RECTANGLE;
+        }
+
+        this.length = length;
+        this.width = width;
+    }
+
+    double area() {
+        switch(shape) {
+            case RECTANGLE, SQUARE:
+                return length * width;
+            case CIRCLE:
+                return Math.PI * (radius * radius);
+            default:
+                throw new AssertionError(shape);
+        }
+    }
+}
+```
+- Shape가 Circle이지만, Rectangle과 관련된 필드, 메서드들을 가지고 있음
