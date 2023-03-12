@@ -651,3 +651,197 @@ removeIf는 범용적으로 잘 작성되었지만 그렇다고 현존하는 모
  - 기존 인터페이스에 디폴트 메서드로 새 메서드를 추가하는 일은 꼭 필요한 경우가 아니면 피해야한다.  
  - 디폴트 메서드는 인터페이스로부터 메서드를 제거하거나 기존 메서드의 시그니처를 수정하는 용도가 아님을 명심해야 한다. 이런 방식으로 코드가 수정되면 기존 클라이언트에 큰 영향이 간다.
  - 디폴트 메서드라는 유용한 도구가 생겼더라도 인터페이스를 설계 할 때는 세심한 주의를 기울여야 한다. 
+
+ # Item 22. 인터페이스는 타입을 정의하는 용도로만 사용하라.
+ 인터페이스는 자신을 구현한 클래스의 인스턴스를 참조할 수 있는 타입 역할을 한다. 인터페이스는 오직 이 용도로만 사용해야한다. **상수인터페이스는 안티패턴으로 인터페이스르 잘못 사용한 예이다.**  
+
+ 상수 인터페이스를 사용하는 것은 내부 구현을 클래스의 API로 노출하는 행위이다. 클라이언트 코드가 내부 구현에 대항하는 상수들에 종속되게 된다. 
+**Java.io.ObjectStreamConstants** 등 자바 플랫폼 라이브러리에도 상수 인터페이스가 있으나 잘못된 예이다. 
+
+특정 클래스나 인터페이스와 강하게 연관된 상수라면 그 클래스나 인터페이스 자체에 추가해야 한다. 대표적으로 Integer, Double에 선언된 `MIN_VALUE`, `MAX_VALUE`가 여기에 해당된다.  
+
+### 정리
+인터페이스는 타입을 정의하는 용도로만 사용해야한다. 상수 공개용 수단으로 사용하지 말자.
+
+# Item 23. 태그 달린 클래스 보다는 클래스 계층구조를 활용하라. 
+여러 정보를 나타내고 특정 필드로 어떤 정보를 나타내는지 설명하는 태그(필드 값 등)로 나타내는 클래스가 있다. 태그가 달린 클래스는 단점이 너무 많다.
+```java
+public class Figure {
+    enum Shape {
+        RECTANGLE, CIRCLE
+    }
+    
+    // 태그 팔드 - 현재 모양을 나타낸다.
+    final Shape shape;
+    
+    double length;
+    double width;
+    
+    // 다음 필드는 모양이 원 Circle 일 때만 쓰인다. 
+    double radius;
+    
+    // 원용 생성자
+    Figure(double radius) {
+        shape = Shape.CIRCLE;
+        this.radius = radius;
+    }
+    
+    // 사각형 생성자
+    Figure(double length, double width) {
+        shape = Shape.RECTANGLE;
+        this.length = length;
+        this.width = width;
+    }
+    
+    double area() {
+        switch (shape) {
+            case RECTANGLE:
+                return length * width;
+            case CIRCLE:
+                return Math.PI * (radius * radius);
+            default:
+                throw new AssertionError(shape);
+        }
+    }
+}
+```
+
+ - 한 클래스에 혼합돼있어서 가독성이 나쁘다. 다른 의미를 위한 코드도 언제나 함께 사용되어 메모리도 많이 사용한다. 
+ - 필드를 final로 선언하려면 해당 의미에 쓰이지 않는 필드들까지 초기화해야한다.
+ - 엉뚱한 필드를 초기화해도 런타임에야 문제가 드러난다. 
+ - 새로운 의미를 나타내야하는 필요가 생기면 코드를 추가해야하는데 하나라도 빠뜨리면 런타임에 문제가 생긴다 (OCP도 아님)
+
+**태그 달린 클래스는 장황하고, 오류를 내기 쉽고, 비효율적이다.** 이를 클래스 계층 구조로 바꾸면 다음과 같다. 
+```java
+public abstract class AbstractFigure {
+    abstract double area();
+}
+
+public class Circle extends AbstractFigure {
+    final double radius;
+
+    Circle(double radius) {
+        this.radius = radius;
+    }
+
+    @Override
+    double area() {
+        return Math.PI * (radius * radius);
+    }
+}
+
+public class Rectangle extends AbstractFigure {
+    final double length;
+    final double width;
+
+    Rectangle(double length, double width) {
+        this.length = length;
+        this.width = width;
+    }
+
+    @Override
+    public double area() {
+        return length * width;
+    }
+}
+
+public class Square extends Rectangle {
+    Square(double side) {
+        super(side, side);
+    }
+}
+```
+
+
+클래스 계층구조는 태그 달린 클래스의 단점을 모두 날려버린다. 필드는 모두 final이다. 실수로 빼먹은 case문을 걱정할 필요도 없다. 독립적으로 계층구조를 확장하고 함께 사용할 수 있다. 타입이 의미별로 존재하니 변수의 의미를 명시하거나 제한할 수 있고, 또 특정 의미만 매개변수로 받을 수 있다. 
+
+### 정리
+태그 달린 클래스를 써야하는 상황은 거의 없다. 새로운 클래스를 작성하는데 태그 필드가 등장한다면 태그를 없애고 계층 구조로 대체하는 방법을 생각해보자.
+기존 클래스가 태그 필드를 사용하고 있다면 계층 구조로 리팩터링하는 걸 고민하자.
+
+# Item 24. 멤버 클래스는 되도록 static으로 만들라.
+중첩 클래스는 자신을 감싼 바깥 클래스에서만 쓰여야하며, 그 외의 쓰임새가 있다면 톱레벨 클래스로 만들어야 한다. 
+
+### 중첩 클래스의 종류는 아래와 같다. 
+ - 정적 멤버 클래스
+ - 멤버 클래스
+ - 익명 클래스
+ - 지역 클래스 
+
+## 정적 멤버 클래스
+
+정적 멤버 클래스는 다른 클래스 안에 선언되고, 바깥 클래스의 private 멤버에도 접근할 수 있다는 점만 제외하고는 일반 클래스와 동일하다.
+**Operation** 열거 타입은 Calculator 클래스의 public 정적 멤버 클래스가 되어야한다. 때문에 Calculator의 클라이언트에서 `Calculator.Operation.PLUS`나 `Calculator.Operation.MINUS` 같은 형태로 연산을 참조할 수 있다. 
+개념상 중첩 클래스의 인스턴스가 바깥 인스터스와 독립적으로 존재할 수 있다면 정적 멤버 클래스로 만들어야 한다. 비정적 멤버 클래스는 바깥 인스턴스 없이는 생성할 수 없기 때문이다. 
+
+## 비정적 멤버 클래스
+비정적 멤버 클래스의 인스턴스와 바깥 인스턴스 사이의 관계는 멤버 클래스가 인스턴스화될 때 확립되며, 더 이상 변경할 수 없다. 이 관계는 바깥 클래스의 인스턴스 메서드에서 비정적 멤버 클래스의 생성자를 호출할 때 자동으로 만들어지는게 보통이지만, 드물게는 직접 바깥 인스턴스의 클래스.new MemberClass(args)를 호출해 수동으로 만들기도 한다. 이 방법은 메모리 공간을 차지하며, 생성 시간도 더 걸린다. 
+> 비정적 멤버 클래스는 어댑터를 정의할 때 자주 쓰인다. 즉, 어떤 클래스의 인스턴스를 감싸 마치 다른 클래스의 인스턴스처럼 보이게하는 뷰로 사용하는 것이다. 
+
+```java
+public class MySet<E> extends AbstractSet<E> {
+    @Override
+    public Iterator<E> iterator() {
+        return new MyIterator();
+    }
+
+    @Override
+    public int size() {
+        return 0;
+    }
+
+    private class MyIterator implements Iterator<E> { // 비정적 멤버 클래스로 iterator 구현
+
+        @Override
+        public boolean hasNext() {
+            return false;
+        }
+
+        @Override
+        public E next() {
+            return null;
+        }
+    }
+}
+```
+**멤버 클래스에 바깥 인스턴스에 접근할 일이 없다면 무조건 static을 붙여서 정적 멤버 클래스로 만들자. static을 생략하면 바깥 인스턴스로의 숨은 외부 참조를 갖게 된다. 
+참조를 저장하려면 시간과 공간이 소비된다. 더 심각한 것은 가비지 컬렉션이 바깥 클래스의 인스턴스를 수거하지 못하는 메모리 누수가 생길 수 있다는 점이다.**
+
+## 익명클래스
+익명 클래스는 이름이 없고 멤버 클래스도 아니다. 멤버와 달리, 쓰이는 시점에 선언과 동시에 인스턴스가 만들어진다. 코드 어디서든 만들 수 있다. 그리고 오직 **비정적인 문맥에서 사용될 때만 바깥 클래스의 인스턴스를 참조할 수 있다.**  
+익명 클래스는 선언한 지점에서만 인스턴스를 만들 수 있고, instanceof 검사나 클래스의 이름이 필요한 작업은 수행할 수 없다. 여러 인터페이스를 구현할 수 없고, 인터페이스를 구현하는 동시에 다른 클래스를 상속할 수도 없다. 익명 클래스를 사용하는 클라이언트는 그 익명 클래스가 상위 타입에서 상속한 멤버 외에는 호출할 수 없다. 익명 클래스는 짧지않으면 가독성이 떨어진다. 익명 클래스의 또다른 사용처는 정적 팩토리 메서드를 만들 때이다. 
+
+```java
+// 익명 클래스를 이용해 정적 팩토리 메서드 구현.
+public interface IntListHelper {
+    
+    static List<Integer> intArrayAsList(int[] a) {
+        return new AbstractList<Integer>() {
+            @Override
+            public Integer get(int index) {
+                return a[index];
+            }
+
+            @Override
+            public int size() {
+                return a.length;
+            }
+        };
+    }
+}
+
+```
+
+## 지역 클래스
+ - 가장 드물게 사용된다. 
+ - 선언 위치도 유효 범위도 지역변수와 동일하다.
+ - 이름이 있고 반복해서 사용할 수 있다. (지역 스코프 내에서)
+ - 익명 클래스처럼 비정적 문맥에서 사용될 때만 바깥 인스턴스를 참조할 수 있다.
+ - 정적 멤버는 가질 수 없다.
+ - 가독성을 위해 짧게 작성한다. 
+
+### 정리
+중첩클래스는 쓰임에 따라 여러 형태로 구현할 수 있다. 
+ - 메서드 밖에서도 사용하거나 너무 길다면 멤버 클래스로 만든다.
+ - 멤버 클래스의 인스턴스 각각이 바깥 인스턴스를 참조한다면 비정적으로, 그렇지 않으면 정적으로 만들자.
+ - 중첩 클래스가 한 메서드 안에서만 쓰이면서 그 인스턴스를 생성하는 지점이 단 한 곳이고 해당 타입으로 쓰기에 적합한 클래스나 인터페이스가 이미 있다면 익명 클래스로 만들고 아닌 경우 지역클래스로 만들자.
